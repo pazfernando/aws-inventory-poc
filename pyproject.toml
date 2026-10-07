@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aws-lifecycle-inventory"
+version = "0.1.0"
+description = "Read-only AWS tool that discovers version-bearing resources, normalizes their versions, and reports them as CSV."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.34",
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "moto[all]>=5.0",
+]
+
+[project.scripts]
+aws-lifecycle-inventory = "aws_lifecycle_inventory.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"aws_lifecycle_inventory.lifecycle.providers" = ["*.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,74 @@
+schema: spec-driven
+
+context: |
+  AWS Resource Lifecycle Inventory Tool. Read-only AWS tool that discovers
+  version-bearing AWS resources, normalizes their software/runtime/engine
+  versions, evaluates lifecycle/deprecation status, and writes a CSV report.
+
+  Non-negotiable architectural principles (apply to every change):
+  - Read-only AWS access. The tool MUST NOT modify scanned workloads.
+  - Inventory before lifecycle intelligence: prove discovery and version
+    extraction before layering deprecation semantics.
+  - Direct AWS service APIs are the baseline inventory source. AWS Config is a
+    candidate centralized source that MUST be measured before being adopted.
+  - One normalized record model is shared by CLI, CSV, Config, Health, SSM and
+    Lambda. The baseline CSV contract is: account_id, region, resource_type,
+    resource_id, resource_arn, software_type, software_name, version,
+    inventory_source, collected_at. Lifecycle and operational fields are added
+    only in their owning changes; never retire existing columns silently.
+  - UNKNOWN is a valid lifecycle status. Absence of evidence MUST NOT be read
+    as SUPPORTED, and UNKNOWN MUST stay distinguishable from SUPPORTED.
+  - A collector MUST NOT invent or infer a version the AWS API does not expose.
+  - Provenance is preserved: every record records its inventory_source and every
+    non-UNKNOWN lifecycle conclusion records its lifecycle_source/evidence. When
+    multiple sources describe the same resource, preserve provenance and never
+    silently overwrite conflicting values.
+  - Partial failures MUST NOT abort the whole scan; surface them as collector or
+    coverage status instead.
+  - Lifecycle, vulnerability/CVE (Inspector), and inventory are separate
+    concerns and MUST NOT be conflated. Inspector is optional (Change 10 only)
+    and MUST NOT redefine lifecycle fields.
+  - CLI-first; the same core discovery/evaluation engine MUST be reusable from a
+    Lambda batch handler without rewriting it.
+
+  Target stack: Python 3.12+, boto3. Target layout under
+  src/aws_lifecycle_inventory/ (cli.py, models.py, orchestration.py,
+  inventory/direct_api, inventory/config, lifecycle/evaluator.py,
+  lifecycle/providers, managed_nodes/ssm.py, output/csv_writer.py) with
+  tests/unit and tests/fixtures.
+
+  The work is sequenced as independent OpenSpec changes 01..10; each is proposed,
+  implemented, verified, and archived before the next begins. Changes 01-09 are
+  the baseline; Change 10 (Inspector) is optional and only justified if
+  vulnerability/CVE management becomes a requirement.
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
