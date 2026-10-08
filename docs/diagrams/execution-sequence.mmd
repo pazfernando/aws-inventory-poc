@@ -15,8 +15,8 @@ sequenceDiagram
     Note over Tool,Org: one account at a time, failures isolated
 
     loop each account and region
-        Tool->>AWS: discover resources and versions (read-only)
-        AWS-->>Tool: resources (Lambda, RDS, EKS, MSK, ...)
+        Tool->>AWS: discover resources (read-only)
+        AWS-->>Tool: version-bearing (Lambda, RDS, EKS, ...) and presence-only (EC2, VPC, DynamoDB, SNS, SQS, EFS, CloudFormation, Route53)
         opt centralized source available
             Tool->>Config: query inventory (reconcile, not wired)
             Config-->>Tool: resources with provenance
@@ -26,6 +26,7 @@ sequenceDiagram
     Note over Tool: normalize into one record model (no invented versions)
 
     opt lifecycle evaluation (not wired yet)
+        Note over Tool: non-version-bearing resources are NOT_APPLICABLE (skipped)
         Tool->>Health: check AWS-announced end-of-support
         Health-->>Tool: authoritative lifecycle evidence
         Tool->>EOL: look up product/version end-of-life

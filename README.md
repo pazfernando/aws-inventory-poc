@@ -67,6 +67,20 @@ eks:ListClusters
 eks:DescribeCluster
 ```
 
+### Read-only IAM actions for general (non-version-bearing) inventory
+
+```
+ec2:DescribeInstances
+ec2:DescribeVpcs
+dynamodb:ListTables
+sns:ListTopics
+sqs:ListQueues
+elasticfilesystem:DescribeFileSystems
+cloudformation:DescribeStacks
+cloudformation:ListStackSets
+route53:ListHostedZones
+```
+
 ## Development
 
 ```bash

@@ -21,6 +21,10 @@ class LifecycleStatus(str, Enum):
     EOL = "EOL"
     UNSUPPORTED = "UNSUPPORTED"
     UNKNOWN = "UNKNOWN"
+    # A resource type that carries no software version to evaluate. Distinct from
+    # UNKNOWN (absence of evidence) and SUPPORTED. Assigned without consulting any
+    # provider.
+    NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
 @dataclass

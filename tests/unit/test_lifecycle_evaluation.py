@@ -25,14 +25,58 @@ def _record(software_name="python", version="3.12"):
     )
 
 
-# --- task 1.1: all eight states exist --------------------------------------
+# --- task 1.1: lifecycle states exist --------------------------------------
 
-def test_lifecycle_status_has_eight_states():
+def test_lifecycle_status_states():
     names = {s.name for s in LifecycleStatus}
     assert names == {
         "SUPPORTED", "EOL_365", "EOL_180", "EOL_90", "EOL_30",
-        "EOL", "UNSUPPORTED", "UNKNOWN",
+        "EOL", "UNSUPPORTED", "UNKNOWN", "NOT_APPLICABLE",
     }
+
+
+# --- add-general-resource-inventory: NOT_APPLICABLE for no-version resources -
+
+def _nonversion_record(resource_type="AWS::SNS::Topic", resource_id="topic"):
+    return ResourceVersionRecord(
+        account_id="123456789012",
+        region="us-east-1",
+        resource_type=resource_type,
+        resource_id=resource_id,
+    )
+
+
+def test_non_version_bearing_record_is_not_applicable():
+    evaluated = evaluate_record(_nonversion_record(), [], today=TODAY)
+    assert evaluated.lifecycle_status == LifecycleStatus.NOT_APPLICABLE.value
+    # Distinct from UNKNOWN and SUPPORTED.
+    assert evaluated.lifecycle_status != LifecycleStatus.UNKNOWN.value
+    assert evaluated.lifecycle_status != LifecycleStatus.SUPPORTED.value
+    # No provider evidence is attached.
+    assert evaluated.lifecycle_source == ""
+    assert evaluated.eol_date is None
+    assert evaluated.evaluated_at is not None
+
+
+def test_not_applicable_assigned_without_consulting_providers():
+    class _ExplodingProvider:
+        source = "BOOM"
+
+        def match(self, record):  # pragma: no cover - must never be called
+            raise AssertionError("provider must not be consulted for NOT_APPLICABLE")
+
+    evaluated = evaluate_record(
+        _nonversion_record(), [_ExplodingProvider()], today=TODAY
+    )
+    assert evaluated.lifecycle_status == LifecycleStatus.NOT_APPLICABLE.value
+
+
+def test_version_bearing_without_version_stays_unknown():
+    # A version-bearing resource type with an empty version is NOT reclassified as
+    # NOT_APPLICABLE; absence of a version there is absence of evidence -> UNKNOWN.
+    rec = _record(version="")
+    evaluated = evaluate_record(rec, [], today=TODAY)
+    assert evaluated.lifecycle_status == LifecycleStatus.UNKNOWN.value
 
 
 # --- task 1.2: lifecycle columns appended after baseline -------------------

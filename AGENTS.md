@@ -14,7 +14,12 @@ Lambda batch process reusing the same core engine.
 Changes 01-05 plus `add-endoflife-lifecycle-source` are implemented and verified;
 Changes 01-04 are archived. The package under `src/aws_lifecycle_inventory/` has
 the record model (with lifecycle fields), CSV writer, scan engine, CLI, 11
-direct-API collectors, an optional AWS Config source + provenance reconciliation
+version-bearing direct-API collectors plus 8 non-version-bearing general-inventory
+collectors (EC2, VPC, DynamoDB, SNS, SQS, EFS, CloudFormation stacks/stacksets,
+Route53 — `add-general-resource-inventory`; these emit presence records with empty
+`version` and lifecycle status `NOT_APPLICABLE`, assigned by the evaluator without
+consulting providers via `inventory/resource_kinds.py`), an optional AWS Config
+source + provenance reconciliation
 under `inventory/config/`, and a lifecycle evaluation layer under `lifecycle/`:
 status enum + evidence model, provider-based `evaluator.py` (ordering = precedence;
 other matches preserved as provenance), an AWS Health provider

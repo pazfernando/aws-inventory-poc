@@ -61,7 +61,14 @@ def test_two_regions_produce_records_for_both():
     )
 
     assert {r.region for r in result.records} == set(REGIONS)
-    assert {r.resource_id for r in result.records} == {"fn-us-east-1", "fn-eu-west-1"}
+    # Scope to the Lambda functions we created; the default collector set also
+    # discovers moto's auto-created VPCs and other default resources.
+    lambda_ids = {
+        r.resource_id
+        for r in result.records
+        if r.resource_type == "AWS::Lambda::Function"
+    }
+    assert lambda_ids == {"fn-us-east-1", "fn-eu-west-1"}
 
 
 # --- task 2.1: per-region provenance survives combining ------------------------

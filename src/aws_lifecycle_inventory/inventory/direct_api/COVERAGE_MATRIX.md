@@ -21,6 +21,24 @@ the matrix cannot silently drift from the code.
 | mq | AWS::AmazonMQ::Broker | `ListBrokers`, `DescribeBroker` | `mq:ListBrokers`, `mq:DescribeBroker` | `EngineType` + `EngineVersion` | `activemq` / `5.18` | — | `AWS::AmazonMQ::Broker` recorded (coverage to verify) |
 | mwaa | AWS::MWAA::Environment | `ListEnvironments`, `GetEnvironment` | `airflow:ListEnvironments`, `airflow:GetEnvironment` | `AirflowVersion` | `airflow` / `2.9.2` | Not supported by moto → normalization tested via stub | Config support uncertain — to verify in Change 03 |
 
+## Non-version-bearing resources (general inventory)
+
+These collectors (`add-general-resource-inventory`) discover resources that carry
+no software version. Their records have empty `version`/`software_*` and the
+lifecycle evaluator assigns `NOT_APPLICABLE`. They exist for presence/inventory
+(usage metrics are a separate future capability).
+
+| collector | resource_type | AWS API (read-only) | Required IAM | Version field used | Example normalized output (software_name / version) | Known gaps | AWS Config equivalence (to measure in Change 03) |
+|-----------|---------------|---------------------|--------------|--------------------|------------------------------------------------------|------------|--------------------------------------------------|
+| ec2-instances | AWS::EC2::Instance | `DescribeInstances` | `ec2:DescribeInstances` | — (no version) | — / — | OS/software versions not read here (see SSM inventory) | `AWS::EC2::Instance` recorded |
+| vpcs | AWS::EC2::VPC | `DescribeVpcs` | `ec2:DescribeVpcs` | — (no version) | — / — | — | `AWS::EC2::VPC` recorded |
+| dynamodb-tables | AWS::DynamoDB::Table | `ListTables` | `dynamodb:ListTables` | — (no version) | — / — | — | `AWS::DynamoDB::Table` recorded |
+| sns-topics | AWS::SNS::Topic | `ListTopics` | `sns:ListTopics` | — (no version) | — / — | — | `AWS::SNS::Topic` recorded |
+| sqs-queues | AWS::SQS::Queue | `ListQueues` | `sqs:ListQueues` | — (no version) | — / — | — | `AWS::SQS::Queue` recorded |
+| efs-filesystems | AWS::EFS::FileSystem | `DescribeFileSystems` | `elasticfilesystem:DescribeFileSystems` | — (no version) | — / — | — | `AWS::EFS::FileSystem` recorded |
+| cloudformation | AWS::CloudFormation::Stack / StackSet | `DescribeStacks`, `ListStackSets` | `cloudformation:DescribeStacks`, `cloudformation:ListStackSets` | — (no version) | — / — | Nested stack resources not enumerated (bounded volume) | `AWS::CloudFormation::Stack` recorded |
+| route53-hosted-zones | AWS::Route53::HostedZone | `ListHostedZones` | `route53:ListHostedZones` | — (no version) | — / — | Global resource — recorded once with `global` region marker | `AWS::Route53::HostedZone` recorded |
+
 ## Notes
 
 - Every collector emits the same normalized `ResourceVersionRecord`; version fields

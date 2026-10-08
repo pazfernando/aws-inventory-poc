@@ -12,6 +12,9 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from typing import Protocol
 
+from aws_lifecycle_inventory.inventory.resource_kinds import (
+    NON_VERSION_BEARING_RESOURCE_TYPES,
+)
 from aws_lifecycle_inventory.lifecycle.models import LifecycleEvidence, LifecycleStatus
 from aws_lifecycle_inventory.models import ResourceVersionRecord
 
@@ -76,6 +79,17 @@ def evaluate_record(
     """
     today = today or datetime.now(timezone.utc).date()
     now = datetime.now(timezone.utc)
+
+    # Non-version-bearing resources have no version to evaluate: assign
+    # NOT_APPLICABLE without consulting any provider. This stays distinct from
+    # UNKNOWN (absence of evidence) and SUPPORTED.
+    if record.resource_type in NON_VERSION_BEARING_RESOURCE_TYPES:
+        return record.model_copy(
+            update={
+                "lifecycle_status": LifecycleStatus.NOT_APPLICABLE.value,
+                "evaluated_at": now,
+            }
+        )
 
     matches: list[LifecycleEvidence] = []
     for provider in providers:
