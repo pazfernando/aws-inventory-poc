@@ -12,6 +12,10 @@ from typing import Protocol
 
 import boto3
 
+from aws_lifecycle_inventory.account_access import (
+    AccountAccessStatus,
+    resolve_account_session,
+)
 from aws_lifecycle_inventory.models import ResourceVersionRecord
 
 
@@ -25,6 +29,8 @@ class CollectorStatus:
     # Region provenance of this status. ``None`` for single-region scans;
     # multi-region scans always set it.
     region: str | None = None
+    # Account provenance of this status; set by organization-wide scans.
+    account: str | None = None
     # Inventory source the collector belongs to (e.g. DIRECT_API). Collectors may
     # declare their own ``source``; the engine defaults to DIRECT_API.
     source: str = "DIRECT_API"
@@ -65,6 +71,100 @@ class MultiRegionScanResult:
                 "error_code": status.error_code,
             }
         return summary
+
+
+# Change 03's measured decision (src/aws_lifecycle_inventory/inventory/config/
+# EVALUATION_REPORT.md): direct APIs stay primary; Config is reserved for
+# org-scale aggregation and was re-evaluated in Change 07, which applies this
+# recorded conclusion instead of re-litigating it.
+ORG_SOURCE_STRATEGY = "DIRECT_API_PRIMARY"
+
+
+@dataclass
+class OrgScanResult:
+    """Combined result of a scan across accounts x regions of an organization."""
+
+    regions: list[str] = field(default_factory=list)
+    accounts: list[str] = field(default_factory=list)
+    records: list[ResourceVersionRecord] = field(default_factory=list)
+    account_statuses: list[AccountAccessStatus] = field(default_factory=list)
+    collector_statuses: list[CollectorStatus] = field(default_factory=list)
+
+    def execution_summary(self) -> dict:
+        """Structured status breakdown by account -> (access, regions -> source -> collector).
+
+        Inaccessible accounts appear with ``access.ok == False`` and no regions.
+        """
+        summary: dict = {}
+        for status in self.account_statuses:
+            summary.setdefault(
+                status.account_id,
+                {
+                    "access": {
+                        "ok": status.ok,
+                        "error_code": status.error_code,
+                    },
+                    "regions": {},
+                },
+            )
+        for status in self.collector_statuses:
+            account = summary.setdefault(
+                status.account or "",
+                {"access": {"ok": True, "error_code": ""}, "regions": {}},
+            )
+            per_collector = (
+                account["regions"]
+                .setdefault(status.region or "", {})
+                .setdefault(status.source, {})
+            )
+            per_collector[status.name] = {
+                "ok": status.ok,
+                "record_count": status.record_count,
+                "error_code": status.error_code,
+            }
+        return summary
+
+
+def run_org_scan(
+    collectors: list[Collector],
+    session: boto3.Session,
+    regions: list[str],
+    accounts: list[str],
+    role_name: str,
+    external_id: str | None = None,
+) -> OrgScanResult:
+    """Scan every target account x region via cross-account direct-API fan-out.
+
+    Applies the Change 03 decision (``ORG_SOURCE_STRATEGY``): org-wide inventory
+    is gathered by assuming a read-only role per account and running the shared
+    multi-region engine (Change 06) with that session. Accounts are isolated:
+    an un-assumable role is reported, never an abort.
+    """
+    if ORG_SOURCE_STRATEGY != "DIRECT_API_PRIMARY":
+        raise NotImplementedError(
+            "Only the DIRECT_API_PRIMARY strategy is implemented "
+            f"(recorded decision: {ORG_SOURCE_STRATEGY})"
+        )
+
+    result = OrgScanResult(regions=list(regions), accounts=list(accounts))
+    for account_id in accounts:
+        account_session, access = resolve_account_session(
+            session, account_id, role_name, external_id=external_id
+        )
+        if account_session is None:
+            result.account_statuses.append(access)
+            continue
+
+        region_result = run_scan_multi_region(
+            collectors, account_session, regions, account_id=account_id
+        )
+        for status in region_result.collector_statuses:
+            status.account = account_id
+        result.records.extend(region_result.records)
+        result.collector_statuses.extend(region_result.collector_statuses)
+        access.record_count = len(region_result.records)
+        result.account_statuses.append(access)
+    return result
 
 
 class Collector(Protocol):

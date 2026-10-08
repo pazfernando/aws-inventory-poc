@@ -29,6 +29,16 @@ applies the Change 03 source-strategy decision at org scale.
   the org-wide path matches the measured conclusion.
 - **Org-level Health vs per-account Health evaluated**, defaulting to per-account
   Health access to stay within the non-fatal provider model from Change 05.
+- **Per-account AWS Health visibility is the default** (org-level deferred):
+  Health is consulted with each target account's own assumed session. Org-level
+  Health (the management-account organization view) would require management
+  credentials and attribute events across accounts the running principal cannot
+  see, weakening evidence provenance; it is deferred until a change owns that
+  decision. Per-account access preserves the Change 05 non-fatal contract —
+  Health unavailability in one account degrades that account's records to
+  EndOfLife/UNKNOWN per precedence without aborting the scan, as pinned by
+  `tests/unit/test_aws_health_provider.py` (non-fatal availability detection
+  and end-to-end available vs unavailable scenarios).
 
 ## Risks / Trade-offs
 
