@@ -14,6 +14,7 @@ import sys
 import boto3
 
 from aws_lifecycle_inventory.inventory.direct_api import default_collectors
+from aws_lifecycle_inventory.lifecycle import assess_records
 from aws_lifecycle_inventory.orchestration import (
     MultiRegionScanResult,
     ScanResult,
@@ -78,7 +79,10 @@ def run(args: argparse.Namespace) -> MultiRegionScanResult:
                 "Pass --regions (or --region) or configure a default region."
             )
         regions = [region]
+    # Discovery and lifecycle assessment are separate, composable steps: scan
+    # produces records, then the reusable assessment service annotates them.
     result = run_scan_multi_region(default_collectors(), session, regions)
+    result.records = assess_records(result.records, session=session)
     write_csv(result.records, args.output)
     return result
 

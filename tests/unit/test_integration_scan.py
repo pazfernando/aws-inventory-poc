@@ -112,3 +112,35 @@ def test_cli_help_runs():
     parser.print_help(help_text)
     assert "aws-lifecycle-inventory" in help_text.getvalue()
     assert "--profile" in help_text.getvalue()
+
+
+# --- refactor-lifecycle-assessment-reuse task 4.2 --------------------------
+
+@mock_aws
+def test_cli_composes_assessment_and_populates_lifecycle_columns(tmp_path):
+    # The CLI composes scan -> assess -> write, so the output CSV carries
+    # populated lifecycle columns (python 3.12 is known to the EndOfLife seed).
+    role_arn = _create_lambda_role()
+    boto3.client("lambda", region_name=REGION).create_function(
+        FunctionName="my-fn",
+        Runtime="python3.12",
+        Role=role_arn,
+        Handler="index.handler",
+        Code={"ZipFile": b"def handler(e,c): return 1"},
+    )
+
+    output = tmp_path / "inventory.csv"
+    args = build_parser().parse_args(["--region", REGION, "--output", str(output)])
+    run(args)
+
+    lines = output.read_text().splitlines()
+    header = lines[0].split(",")
+    rows = [dict(zip(header, line.split(","))) for line in lines[1:]]
+    fn = next(r for r in rows if r["resource_id"] == "my-fn")
+
+    # Lifecycle columns are populated by the composed assessment step.
+    assert fn["lifecycle_status"] != ""
+    assert fn["lifecycle_status"] != "UNKNOWN"
+    assert fn["lifecycle_source"] != ""
+    assert fn["evaluated_at"] != ""
+

@@ -1,9 +1,9 @@
 # Tasks
 
-## 1. Engine lifecycle wiring
+## 1. Lifecycle assessment composition
 
-- [ ] 1.1 Wire lifecycle evaluation into `run_scan()`: after aggregation, evaluate each record through the ordered providers (AWS Health → EndOfLife); verify a moto test asserts the scan output carries populated lifecycle columns and UNKNOWN stays distinct from SUPPORTED
-- [ ] 1.2 Keep AWS Health unavailability non-fatal inside the engine; verify a stub-client test asserts evaluation falls back to EndOfLife/UNKNOWN per precedence and the scan completes
+- [ ] 1.1 Compose the reusable assessment service (`lifecycle.assess_records`) as a discrete step after `run_scan()` in the shared entry-point path (CLI and Lambda); verify a moto test asserts the composed output carries populated lifecycle columns and UNKNOWN stays distinct from SUPPORTED. Do NOT evaluate inside `run_scan()` (the engine stays discovery-only).
+- [ ] 1.2 Keep AWS Health unavailability non-fatal in the assessment step; verify a stub-client test asserts evaluation falls back to EndOfLife/UNKNOWN per precedence and the run completes
 
 ## 2. Lambda handler
 

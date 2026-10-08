@@ -46,10 +46,17 @@ validation before archive. Change 03 decision: DIRECT_API_PRIMARY. AWS Config
 stays optional; re-evaluate (Config Aggregator vs cross-account fan-out) was
 resolved in favor of cross-account direct-API fan-out for org scans.
 
-The lifecycle evaluator is a standalone layer; wiring it into the shared engine
-is specified as part of `add-lambda-batch-execution` (tasks 1.1-1.2), not yet
-implemented. Remaining: `add-lambda-batch-execution` (also carries the lifecycle
-wiring) and optional `add-inspector-security-enrichment`.
+The lifecycle evaluator is a standalone layer exposed as a reusable,
+flow-independent **assessment service** (`lifecycle/assessment.py` →
+`assess_records(records, session=None, providers=None, ...)`), which owns provider
+construction and is usable on records from any source
+(`refactor-lifecycle-assessment-reuse`). Discovery and assessment are separate
+composable steps: the scan engine (`run_scan*`) stays discovery-only and the CLI
+composes scan → `assess_records` → CSV. `add-lambda-batch-execution` was
+reconciled to compose the same service after scanning (not fuse evaluation into
+`run_scan()`); it remains unimplemented along with the optional
+`add-inspector-security-enrichment`. A planned `add-resource-usage-metrics`
+follows the same composable-assessment shape for CloudWatch usage signals.
 
 Tests: `python -m pytest -s` (moto; no real AWS). Services moto cannot back (MWAA,
 Config Advanced Queries, AWS Health) are tested via stub clients. See `README.md`
@@ -155,6 +162,7 @@ aws-lifecycle-inventory/
 │   │   └── config/          # AWS Config source (Change 03+)
 │   ├── lifecycle/
 │   │   ├── evaluator.py
+│   │   ├── assessment.py    # reusable assess_records() service
 │   │   └── providers/       # aws_health.py, endoflife.py
 │   ├── managed_nodes/ssm.py # SSM Inventory (Change 08)
 │   └── output/csv_writer.py

@@ -54,6 +54,12 @@ omitted, boto3 resolves credentials from environment variables, `AWS_PROFILE`,
 AWS SSO, the shared credentials file, or an instance/container role. The tool only
 issues read-only (`list`/`describe`) API calls.
 
+Discovery and lifecycle assessment are separate, composable steps: the CLI runs
+the scan (discovery-only), then applies the reusable lifecycle assessment service
+(`lifecycle.assess_records`), then writes the CSV — i.e. **scan → assess → CSV**.
+The assessment service is flow-independent and can be reused on records from any
+source (not only a scan).
+
 ### Required read-only IAM actions
 
 ```

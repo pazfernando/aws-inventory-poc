@@ -25,7 +25,8 @@ sequenceDiagram
 
     Note over Tool: normalize into one record model (no invented versions)
 
-    opt lifecycle evaluation (not wired yet)
+    opt lifecycle assessment (composable step, wired in CLI)
+        Note over Tool: separate reusable step (assess_records), scan stays discovery-only
         Note over Tool: non-version-bearing resources are NOT_APPLICABLE (skipped)
         Tool->>Health: check AWS-announced end-of-support
         Health-->>Tool: authoritative lifecycle evidence
