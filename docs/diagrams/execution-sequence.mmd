@@ -1,0 +1,37 @@
+sequenceDiagram
+    autonumber
+    actor User as "Operator / Schedule"
+    participant Tool as "Inventory Tool (CLI or Lambda)"
+    participant Org as "AWS Organization accounts"
+    participant AWS as "AWS service APIs"
+    participant Config as "AWS Config (optional)"
+    participant Health as "AWS Health"
+    participant EOL as "EndOfLife.date"
+    participant Report as "CSV report + summary"
+
+    User->>Tool: start scan (accounts, regions)
+
+    Tool->>Org: assume read-only role, iterate accounts
+    Note over Tool,Org: one account at a time, failures isolated
+
+    loop each account and region
+        Tool->>AWS: discover resources and versions (read-only)
+        AWS-->>Tool: resources (Lambda, RDS, EKS, MSK, ...)
+        opt centralized source available
+            Tool->>Config: query inventory (reconcile, not wired)
+            Config-->>Tool: resources with provenance
+        end
+    end
+
+    Note over Tool: normalize into one record model (no invented versions)
+
+    opt lifecycle evaluation (not wired yet)
+        Tool->>Health: check AWS-announced end-of-support
+        Health-->>Tool: authoritative lifecycle evidence
+        Tool->>EOL: look up product/version end-of-life
+        EOL-->>Tool: community lifecycle dates
+        Note over Tool: precedence Health then EndOfLife, no match means UNKNOWN
+    end
+
+    Tool->>Report: write CSV + per-account status
+    Report-->>User: inventory.csv + execution summary

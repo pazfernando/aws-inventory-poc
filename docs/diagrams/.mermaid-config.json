@@ -1,0 +1,11 @@
+{
+  "theme": "default",
+  "sequence": {
+    "actorFontSize": 16,
+    "noteFontSize": 15,
+    "messageFontSize": 15,
+    "width": 200,
+    "height": 48,
+    "boxMargin": 12
+  }
+}

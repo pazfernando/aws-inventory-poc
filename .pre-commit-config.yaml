@@ -1,0 +1,14 @@
+# Pre-commit hooks for aws-lifecycle-inventory.
+# Install the framework once:  pip install pre-commit && pre-commit install
+# (A native git hook is also provided at .git/hooks/pre-commit for repos that
+#  do not use the pre-commit framework.)
+repos:
+  - repo: local
+    hooks:
+      - id: execution-diagram-reminder
+        name: Execution sequence diagram reminder
+        entry: scripts/check_execution_diagram.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
