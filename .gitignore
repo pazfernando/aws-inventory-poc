@@ -35,6 +35,3 @@ endoflife_cache.json
 .DS_Store
 .idea/
 .vscode/
-
-# Local one-off scan runner (hardcoded account/profile; not part of the product)
-scripts/run_account_scan.py

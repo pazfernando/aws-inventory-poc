@@ -80,6 +80,28 @@ for CLI usage and IAM.
   Inspector is optional (Change 10) and MUST NOT redefine lifecycle fields.
 - **CLI and Lambda share one core engine.**
 
+## Throwaway scripts and scan outputs stay out of the repo
+
+Ad-hoc helper/runner scripts (one-off scan drivers, debugging or exploration
+scripts, "just to run it once" glue) and any scan output they produce (CSV/XLSX
+reports, logs, dumps) are **not source** and MUST NOT be committed. They are not
+part of the product, often hardcode environment-specific values (profiles,
+account ids, roles), and can leak real account data.
+
+- Generate them **outside the repo**, in a temporary directory — use
+  `/var/folders/8q/k1ysr52x7zz99n1l6lkqtqwm0000gn/T/opencode` (pre-approved) or a
+  `mktemp -d` scratch dir. Do not create them under the working tree.
+- If a script genuinely must live in the tree for iteration, keep it untracked
+  and add it to `.gitignore`; never `git add` it. Scan outputs
+  (`inventory-*.csv`, etc.) are already git-ignored — keep them that way.
+- When a runner proves generally useful, do not commit the one-off version:
+  promote it into the product properly (parameterized, no hardcoded
+  account/profile/role, with tests) as its own change. Until then it stays
+  outside the repo.
+- Reusable, product-level tooling (e.g. `scripts/render_execution_diagram.sh`,
+  `scripts/check_execution_diagram.sh`) is the exception — it is committed
+  because it is parameter-free, environment-agnostic, and part of the workflow.
+
 ## Execution sequence diagram (maintained requirement)
 
 `README.md` MUST display a component-level **sequence diagram** of the org
