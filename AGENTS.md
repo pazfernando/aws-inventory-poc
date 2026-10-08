@@ -26,16 +26,25 @@ EndOfLife provider (`providers/endoflife.py`) backed by endoflife.date data (bak
 replaces it, each entry citing an official source link as evidence). The coverage
 matrix and Config evaluation report are kept with the code
 (`inventory/direct_api/COVERAGE_MATRIX.md`, `inventory/config/EVALUATION_REPORT.md`)
-so their anti-drift tests survive change archival. Remaining baseline changes 06-10
-are planned through OpenSpec and not yet implemented.
+so their anti-drift tests survive change archival.
 
-**Change 03 decision: DIRECT_API_PRIMARY.** AWS Config stays optional; re-evaluate
-(Config Aggregator vs cross-account fan-out) in Change 07.
+Changes 06 and 08 are implemented and archived: `scan-orchestration`
+(`run_scan_multi_region()`, per-region isolation/provenance, structured
+`execution_summary()`, CLI `--regions`) and `managed-node-software-inventory`
+(`managed_nodes/ssm.py`, bounded OS + opt-in application subset, no-inference
+rule, `SSM_UNMANAGED`/`SSM_NO_INVENTORY` coverage gaps, `coverage_status` field +
+CSV column). Change 07 (`add-organization-account-scan`) is implemented and
+in-flight: `account_access.py` assume-role session factory + `run_org_scan()`
+(accounts × regions, per-account isolation, account-aware summary,
+`ORG_SOURCE_STRATEGY = DIRECT_API_PRIMARY`); pending real multi-account
+validation before archive. Change 03 decision: DIRECT_API_PRIMARY. AWS Config
+stays optional; re-evaluate (Config Aggregator vs cross-account fan-out) was
+resolved in favor of cross-account direct-API fan-out for org scans.
 
-CSV has 16 columns: the 10 baseline plus the 6 lifecycle columns, appended in
-order. Lifecycle defaults to UNKNOWN and stays distinguishable from SUPPORTED.
-Note: the lifecycle evaluator is a standalone layer; wiring it into the CLI is not
-yet done (no change has specified it).
+The lifecycle evaluator is a standalone layer; wiring it into the shared engine
+is specified as part of `add-lambda-batch-execution` (tasks 1.1-1.2), not yet
+implemented. Remaining: `add-lambda-batch-execution` (also carries the lifecycle
+wiring) and optional `add-inspector-security-enrichment`.
 
 Tests: `python -m pytest -s` (moto; no real AWS). Services moto cannot back (MWAA,
 Config Advanced Queries, AWS Health) are tested via stub clients. See `README.md`
