@@ -14,7 +14,11 @@ import sys
 import boto3
 
 from aws_lifecycle_inventory.inventory.direct_api import default_collectors
-from aws_lifecycle_inventory.orchestration import ScanResult, run_scan
+from aws_lifecycle_inventory.orchestration import (
+    MultiRegionScanResult,
+    ScanResult,
+    run_scan_multi_region,
+)
 from aws_lifecycle_inventory.output.csv_writer import write_csv
 
 
@@ -36,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="AWS region to scan. Defaults to the session's configured region.",
     )
     parser.add_argument(
+        "--regions",
+        default=None,
+        help=(
+            "Comma-separated AWS regions to scan (e.g. us-east-1,eu-west-1). "
+            "Overrides --region; defaults to the session's configured region."
+        ),
+    )
+    parser.add_argument(
         "--output",
         "-o",
         default="inventory.csv",
@@ -48,25 +60,39 @@ def _build_session(profile: str | None, region: str | None) -> boto3.Session:
     return boto3.Session(profile_name=profile, region_name=region)
 
 
-def run(args: argparse.Namespace) -> ScanResult:
+def _parse_regions(raw: str | None) -> list[str]:
+    """Split a comma-separated region list, dropping blanks."""
+    if not raw:
+        return []
+    return [region.strip() for region in raw.split(",") if region.strip()]
+
+
+def run(args: argparse.Namespace) -> MultiRegionScanResult:
     session = _build_session(args.profile, args.region)
-    region = args.region or session.region_name
-    if not region:
-        raise SystemExit(
-            "No region specified and none found in the AWS session. "
-            "Pass --region or configure a default region."
-        )
-    result = run_scan(default_collectors(), session, region)
+    regions = _parse_regions(args.regions)
+    if not regions:
+        region = args.region or session.region_name
+        if not region:
+            raise SystemExit(
+                "No region specified and none found in the AWS session. "
+                "Pass --regions (or --region) or configure a default region."
+            )
+        regions = [region]
+    result = run_scan_multi_region(default_collectors(), session, regions)
     write_csv(result.records, args.output)
     return result
 
 
-def _print_summary(result: ScanResult, output: str) -> None:
+def _print_summary(result: ScanResult | MultiRegionScanResult, output: str) -> None:
     print(f"Wrote {len(result.records)} record(s) to {output}")
     for status in result.collector_statuses:
         state = "ok" if status.ok else f"FAILED ({status.error_code})"
         detail = f" - {status.error_message}" if not status.ok else ""
-        print(f"  collector {status.name}: {state} [{status.record_count} record(s)]{detail}")
+        where = f" [{status.region}]" if status.region else ""
+        print(
+            f"  collector {status.name}{where}: {state} "
+            f"[{status.record_count} record(s)]{detail}"
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
