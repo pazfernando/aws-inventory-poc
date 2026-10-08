@@ -54,3 +54,59 @@ def test_csv_empty_version_serializes_as_empty_cell():
     data = rows[1].split(",")
     version_index = BASELINE_COLUMNS.index("version")
     assert data[version_index] == ""
+
+
+# --- add-resource-usage-metrics: usage columns -----------------------------
+
+def test_usage_columns_appended_after_existing():
+    from aws_lifecycle_inventory.output.csv_writer import (
+        COVERAGE_COLUMNS,
+        LIFECYCLE_COLUMNS,
+        USAGE_COLUMNS,
+    )
+
+    expected_prefix = BASELINE_COLUMNS + LIFECYCLE_COLUMNS + COVERAGE_COLUMNS
+    assert COLUMNS[: len(expected_prefix)] == expected_prefix
+    assert COLUMNS[len(expected_prefix):] == USAGE_COLUMNS
+
+
+def test_unassessed_record_has_empty_usage_cells():
+    record = ResourceVersionRecord(
+        account_id="123456789012",
+        region="us-east-1",
+        resource_type="AWS::EC2::VPC",
+        resource_id="vpc-1",
+    )
+    stream = io.StringIO()
+    write_records([record], stream)
+    header = stream.getvalue().splitlines()[0].split(",")
+    data = stream.getvalue().splitlines()[1].split(",")
+    row = dict(zip(header, data))
+    for col in (
+        "usage_status", "usage_metric", "usage_value",
+        "usage_window_days", "usage_source", "usage_assessed_at",
+    ):
+        assert row[col] == ""
+
+
+def test_no_metric_distinct_from_idle_zero():
+    no_metric = ResourceVersionRecord(
+        account_id="123456789012", region="us-east-1",
+        resource_type="AWS::EC2::VPC", resource_id="vpc-1",
+        usage_status="NO_METRIC",
+    )
+    idle = ResourceVersionRecord(
+        account_id="123456789012", region="us-east-1",
+        resource_type="AWS::Lambda::Function", resource_id="fn",
+        usage_status="IDLE", usage_value=0.0,
+    )
+    stream = io.StringIO()
+    write_records([no_metric, idle], stream)
+    lines = stream.getvalue().splitlines()
+    header = lines[0].split(",")
+    r_no_metric = dict(zip(header, lines[1].split(",")))
+    r_idle = dict(zip(header, lines[2].split(",")))
+    assert r_no_metric["usage_status"] == "NO_METRIC"
+    assert r_no_metric["usage_value"] == ""        # no value
+    assert r_idle["usage_status"] == "IDLE"
+    assert r_idle["usage_value"] == "0.0"          # explicit zero, distinct

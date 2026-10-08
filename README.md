@@ -60,6 +60,17 @@ the scan (discovery-only), then applies the reusable lifecycle assessment servic
 The assessment service is flow-independent and can be reused on records from any
 source (not only a scan).
 
+Resource **usage assessment** is an opt-in composable step (`--usage`, off by
+default) that derives a usage signal (`IN_USE` / `IDLE` / `NO_DATA` / `NO_METRIC`)
+from read-only CloudWatch over a window (`--usage-window-days`, default 30): the
+full run is **scan → assess lifecycle → assess usage → CSV**. It is also reusable
+on records from any source via `usage.assess_usage`.
+
+```bash
+# include usage signal over the last 30 days
+aws-lifecycle-inventory --region us-east-1 --usage --output inventory.csv
+```
+
 ### Required read-only IAM actions
 
 ```
@@ -85,6 +96,12 @@ elasticfilesystem:DescribeFileSystems
 cloudformation:DescribeStacks
 cloudformation:ListStackSets
 route53:ListHostedZones
+```
+
+### Read-only IAM action for usage assessment (`--usage`)
+
+```
+cloudwatch:GetMetricData
 ```
 
 ## Development

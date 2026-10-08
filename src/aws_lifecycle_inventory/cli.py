@@ -21,6 +21,7 @@ from aws_lifecycle_inventory.orchestration import (
     run_scan_multi_region,
 )
 from aws_lifecycle_inventory.output.csv_writer import write_csv
+from aws_lifecycle_inventory.usage import assess_usage
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -54,6 +55,20 @@ def build_parser() -> argparse.ArgumentParser:
         default="inventory.csv",
         help="Path to the CSV output file (default: inventory.csv).",
     )
+    parser.add_argument(
+        "--usage",
+        action="store_true",
+        help=(
+            "Also assess resource usage from CloudWatch (opt-in). Off by default "
+            "to keep scans cheap. Requires cloudwatch:GetMetricData."
+        ),
+    )
+    parser.add_argument(
+        "--usage-window-days",
+        type=int,
+        default=30,
+        help="Observation window for usage assessment in days (default: 30).",
+    )
     return parser
 
 
@@ -83,6 +98,13 @@ def run(args: argparse.Namespace) -> MultiRegionScanResult:
     # produces records, then the reusable assessment service annotates them.
     result = run_scan_multi_region(default_collectors(), session, regions)
     result.records = assess_records(result.records, session=session)
+    # Usage assessment is an opt-in composable step (off by default).
+    if getattr(args, "usage", False):
+        result.records = assess_usage(
+            result.records,
+            session=session,
+            window_days=args.usage_window_days,
+        )
     write_csv(result.records, args.output)
     return result
 

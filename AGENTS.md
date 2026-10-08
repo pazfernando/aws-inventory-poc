@@ -55,12 +55,19 @@ composable steps: the scan engine (`run_scan*`) stays discovery-only and the CLI
 composes scan → `assess_records` → CSV. `add-lambda-batch-execution` was
 reconciled to compose the same service after scanning (not fuse evaluation into
 `run_scan()`); it remains unimplemented along with the optional
-`add-inspector-security-enrichment`. A planned `add-resource-usage-metrics`
-follows the same composable-assessment shape for CloudWatch usage signals.
+`add-inspector-security-enrichment`. The same composable-assessment shape is
+implemented for **usage** (`add-resource-usage-metrics`): `usage/assessment.py` →
+`assess_usage(records, *, session, window_days=30, ...)` derives a usage signal
+(`IN_USE`/`IDLE`/`NO_DATA`/`NO_METRIC`) from read-only CloudWatch `GetMetricData`
+over a configurable window, backed by a per-resource-type metric registry
+(`usage/registry.py`; unmapped types → `NO_METRIC`, never a false `IDLE`). It is
+opt-in in the CLI (`--usage`, `--usage-window-days`; off by default) and composes
+after lifecycle assessment (scan → assess lifecycle → assess usage → CSV). Usage
+columns are appended to the CSV contract.
 
 Tests: `python -m pytest -s` (moto; no real AWS). Services moto cannot back (MWAA,
-Config Advanced Queries, AWS Health) are tested via stub clients. See `README.md`
-for CLI usage and IAM.
+Config Advanced Queries, AWS Health, CloudWatch GetMetricData) are tested via stub
+clients. See `README.md` for CLI usage and IAM.
 
 > Note: keep any file a test depends on inside `src/` or `tests/`, not inside a
 > change folder — archiving moves change folders and would break the test.
@@ -136,7 +143,7 @@ marked `(not wired)`; keep that honesty.
   (wired via `.pre-commit-config.yaml` and a native `.git/hooks/pre-commit`)
   reminds the committer when flow-relevant source
   (`cli.py`, `orchestration.py`, `account_access.py`, `inventory/`, `lifecycle/`,
-  `managed_nodes/`, `output/csv_writer.py`) is staged without updating the diagram
+  `usage/`, `managed_nodes/`, `output/csv_writer.py`) is staged without updating the diagram
   (`docs/diagrams/execution-sequence.mmd` or `.svg`). Set
   `EXECUTION_DIAGRAM_STRICT=1` to make it block instead of warn.
 - Whenever you change the execution flow, treat the diagram as part of the
@@ -165,6 +172,7 @@ aws-lifecycle-inventory/
 │   │   ├── assessment.py    # reusable assess_records() service
 │   │   └── providers/       # aws_health.py, endoflife.py
 │   ├── managed_nodes/ssm.py # SSM Inventory (Change 08)
+│   ├── usage/               # usage assessment (CloudWatch) + metric registry
 │   └── output/csv_writer.py
 ├── docs/diagrams/
 │   ├── execution-sequence.mmd           # diagram source of truth
@@ -186,6 +194,9 @@ aws-lifecycle-inventory/
 - **After lifecycle (Change 04):** `lifecycle_status, eol_date, days_to_eol,
   lifecycle_source, lifecycle_evidence_id, evaluated_at`
 - **Operational:** `collector_status, coverage_status, error_code, error_message`
+- **Usage (add-resource-usage-metrics):** `usage_status, usage_metric,
+  usage_value, usage_window_days, usage_source, usage_assessed_at` (appended;
+  `NO_METRIC` distinct from `IDLE`/`NO_DATA`; empty when unassessed)
 - **Optional Inspector (Change 10):** `security_status, critical_cve_count,
   high_cve_count, inspector_finding_count, security_source`
 

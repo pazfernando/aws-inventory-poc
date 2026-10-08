@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # Source files whose change may invalidate the execution sequence diagram.
-FLOW_PATHS_REGEX='^src/aws_lifecycle_inventory/(cli\.py|orchestration\.py|account_access\.py|inventory/|lifecycle/|managed_nodes/|output/csv_writer\.py)'
+FLOW_PATHS_REGEX='^src/aws_lifecycle_inventory/(cli\.py|orchestration\.py|account_access\.py|inventory/|lifecycle/|usage/|managed_nodes/|output/csv_writer\.py)'
 
 # Any of these being staged counts as "the diagram was addressed".
 DIAGRAM_PATHS_REGEX='^docs/diagrams/execution-sequence\.(mmd|svg)$'

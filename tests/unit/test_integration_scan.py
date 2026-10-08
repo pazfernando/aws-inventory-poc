@@ -144,3 +144,36 @@ def test_cli_composes_assessment_and_populates_lifecycle_columns(tmp_path):
     assert fn["lifecycle_source"] != ""
     assert fn["evaluated_at"] != ""
 
+
+# --- add-resource-usage-metrics task 5.2 -----------------------------------
+
+@mock_aws
+def test_cli_usage_opt_in_populates_usage_columns(tmp_path):
+    role_arn = _create_lambda_role()
+    boto3.client("lambda", region_name=REGION).create_function(
+        FunctionName="my-fn",
+        Runtime="python3.12",
+        Role=role_arn,
+        Handler="index.handler",
+        Code={"ZipFile": b"def handler(e,c): return 1"},
+    )
+
+    # Without --usage: usage columns stay empty.
+    out_off = tmp_path / "off.csv"
+    run(build_parser().parse_args(["--region", REGION, "--output", str(out_off)]))
+    header = out_off.read_text().splitlines()[0].split(",")
+    rows = [dict(zip(header, l.split(","))) for l in out_off.read_text().splitlines()[1:]]
+    fn_off = next(r for r in rows if r["resource_id"] == "my-fn")
+    assert fn_off["usage_status"] == ""
+
+    # With --usage: usage_status is populated (moto returns no datapoints -> the
+    # Lambda is NO_DATA, which is still an assessed, non-empty status).
+    out_on = tmp_path / "on.csv"
+    run(build_parser().parse_args(
+        ["--region", REGION, "--output", str(out_on), "--usage"]
+    ))
+    header = out_on.read_text().splitlines()[0].split(",")
+    rows = [dict(zip(header, l.split(","))) for l in out_on.read_text().splitlines()[1:]]
+    fn_on = next(r for r in rows if r["resource_id"] == "my-fn")
+    assert fn_on["usage_status"] != ""
+    assert fn_on["usage_window_days"] == "30"

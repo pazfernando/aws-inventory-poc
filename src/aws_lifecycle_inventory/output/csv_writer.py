@@ -46,7 +46,21 @@ COVERAGE_COLUMNS: tuple[str, ...] = (
     "coverage_status",
 )
 
-COLUMNS: tuple[str, ...] = BASELINE_COLUMNS + LIFECYCLE_COLUMNS + COVERAGE_COLUMNS
+# Usage columns (add-resource-usage-metrics), appended after coverage. Empty when
+# a record has not been through usage assessment; NO_METRIC stays distinct from
+# IDLE and NO_DATA. Never reorder or remove an existing column.
+USAGE_COLUMNS: tuple[str, ...] = (
+    "usage_status",
+    "usage_metric",
+    "usage_value",
+    "usage_window_days",
+    "usage_source",
+    "usage_assessed_at",
+)
+
+COLUMNS: tuple[str, ...] = (
+    BASELINE_COLUMNS + LIFECYCLE_COLUMNS + COVERAGE_COLUMNS + USAGE_COLUMNS
+)
 
 
 def _cell(value: object) -> str:

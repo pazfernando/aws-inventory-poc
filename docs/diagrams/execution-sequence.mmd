@@ -7,6 +7,7 @@ sequenceDiagram
     participant Config as "AWS Config (optional)"
     participant Health as "AWS Health"
     participant EOL as "EndOfLife.date"
+    participant CW as "CloudWatch (usage, opt-in)"
     participant Report as "CSV report + summary"
 
     User->>Tool: start scan (accounts, regions)
@@ -33,6 +34,13 @@ sequenceDiagram
         Tool->>EOL: look up product/version end-of-life
         EOL-->>Tool: community lifecycle dates
         Note over Tool: precedence Health then EndOfLife, no match means UNKNOWN
+    end
+
+    opt usage assessment (opt-in composable step)
+        Note over Tool: separate reusable step (assess_usage), off by default
+        Tool->>CW: read metrics over window (GetMetricData)
+        CW-->>Tool: activity values
+        Note over Tool: IN_USE / IDLE / NO_DATA, no metric means NO_METRIC
     end
 
     Tool->>Report: write CSV + per-account status

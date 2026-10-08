@@ -51,3 +51,16 @@ class ResourceVersionRecord(BaseModel):
     # semantics. Coverage gaps (e.g. EC2 instances not managed by SSM) carry an
     # explicit gap code here instead of fabricated software.
     coverage_status: str = ""
+
+    # --- Usage assessment fields (add-resource-usage-metrics) ---
+    # Populated by the opt-in usage assessment service. Empty when a record has
+    # not been through usage assessment (distinct from an assessed IDLE/NO_METRIC
+    # result). usage_status is one of IN_USE / IDLE / NO_DATA / NO_METRIC.
+    usage_status: str = ""
+    usage_metric: str = ""
+    # Activity value backing the status (e.g. invocation/connection count in the
+    # window). None when unassessed or no metric; distinct from an explicit 0.
+    usage_value: float | None = None
+    usage_window_days: int | None = None
+    usage_source: str = ""
+    usage_assessed_at: datetime | None = None
