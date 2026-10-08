@@ -10,6 +10,9 @@ centrally, without rewriting discovery or evaluation logic.
 
 - Add a batch-execution capability: a Lambda handler that accepts a scan scope
   (accounts/regions) and invokes the same shared core engine as the CLI.
+- Wire lifecycle evaluation into the shared scan engine: after collection,
+  `run_scan()` evaluates each record through the ordered providers (AWS Health
+  then EndOfLife) so CLI and Lambda CSVs carry populated lifecycle columns.
 - Write the output CSV to S3 using a deterministic, timestamped report key.
 - Preserve identical normalized semantics between CLI and Lambda for equivalent
   scope and permissions.
@@ -22,10 +25,13 @@ centrally, without rewriting discovery or evaluation logic.
 
 ### Modified Capabilities
 
-(none — the core engine is reused unchanged)
+- `lifecycle-evaluation`: provider evaluation now runs at scan time inside the
+  shared engine (evaluation semantics unchanged).
 
 ## Impact
 
+- `orchestration.run_scan()` gains a lifecycle evaluation pass over collected
+  records; AWS Health unavailability stays non-fatal.
 - New Lambda handler module reusing `orchestration.run_scan()`.
 - IAM: existing read-only scan permissions plus `s3:PutObject` to the report
   bucket/prefix.

@@ -11,6 +11,8 @@ entrypoint and S3 sink only.
 **Goals:**
 - A thin Lambda handler that parses an event scope, calls `run_scan()`, and writes
   the CSV to S3 with a deterministic timestamped key.
+- Lifecycle columns populated in both CLI and Lambda output through the single
+  shared engine.
 - Demonstrated CLI/Lambda output equivalence.
 
 **Non-Goals:**
@@ -20,6 +22,11 @@ entrypoint and S3 sink only.
 
 ## Decisions
 
+- **Evaluation runs inside `run_scan()`, not the entrypoints**: collectors stay
+  lifecycle-agnostic; after aggregation the engine evaluates every record through
+  the ordered providers (AWS Health → EndOfLife; Health unavailability is
+  non-fatal). Rationale: one integration point — CLI and Lambda cannot diverge.
+  Alternative (per-entrypoint wiring) rejected as duplication.
 - **Handler is an adapter, not logic**: event → scope → `run_scan()` → CSV bytes →
   S3. Rationale: enforces the single-engine principle and keeps semantics
   identical to the CLI. Alternative (Lambda-specific scan path) rejected outright.
@@ -38,3 +45,5 @@ entrypoint and S3 sink only.
   import succeeds.
 - [Divergence between CLI and Lambda] → an equivalence test over the same scope
   guards the single-engine guarantee.
+- [Health unavailable under Lambda IAM] → non-fatal: evaluation falls back to
+  EndOfLife or UNKNOWN per precedence.

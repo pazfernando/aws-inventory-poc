@@ -38,3 +38,23 @@ normalized semantics as the CLI output.
 #### Scenario: Equivalent outputs
 - **WHEN** the CLI and Lambda run the same scope with the same permissions
 - **THEN** their normalized records and columns are equivalent
+
+### Requirement: Lifecycle-populated batch output
+The batch scan output SHALL carry lifecycle fields evaluated by the shared engine
+per provider precedence (AWS Health, then EndOfLife); AWS Health unavailability
+SHALL be non-fatal, and absence of evidence SHALL remain UNKNOWN.
+
+#### Scenario: Lifecycle columns populated
+- **WHEN** a Lambda scan completes
+- **THEN** each record carries `lifecycle_status` and, when evidence exists,
+  `eol_date`, `days_to_eol`, `lifecycle_source`, `lifecycle_evidence_id` and
+  `evaluated_at`
+
+#### Scenario: Health unavailable is non-fatal
+- **WHEN** AWS Health is not usable by the scan
+- **THEN** the scan completes and records keep EndOfLife or UNKNOWN lifecycle
+  conclusions per precedence, with no error aborting the report
+
+#### Scenario: No evidence stays UNKNOWN
+- **WHEN** no provider matches a record
+- **THEN** its lifecycle status is UNKNOWN and it is never reported as SUPPORTED
