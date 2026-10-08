@@ -45,3 +45,9 @@ class ResourceVersionRecord(BaseModel):
     # Provenance of other sources that also matched this resource (preserved so a
     # lower-precedence source is never silently discarded). Not a CSV column.
     lifecycle_other_sources: list[dict] = Field(default_factory=list)
+
+    # --- Operational coverage fields (Change 08) ---
+    # Machine-visible coverage status; empty for sources without coverage
+    # semantics. Coverage gaps (e.g. EC2 instances not managed by SSM) carry an
+    # explicit gap code here instead of fabricated software.
+    coverage_status: str = ""

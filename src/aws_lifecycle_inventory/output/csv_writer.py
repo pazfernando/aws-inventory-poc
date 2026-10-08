@@ -39,7 +39,14 @@ LIFECYCLE_COLUMNS: tuple[str, ...] = (
     "evaluated_at",
 )
 
-COLUMNS: tuple[str, ...] = BASELINE_COLUMNS + LIFECYCLE_COLUMNS
+# Coverage columns (Change 08), appended after the lifecycle columns. Other
+# operational fields (collector_status, error_code, error_message) are added by
+# their owning changes; never reorder or remove an existing column.
+COVERAGE_COLUMNS: tuple[str, ...] = (
+    "coverage_status",
+)
+
+COLUMNS: tuple[str, ...] = BASELINE_COLUMNS + LIFECYCLE_COLUMNS + COVERAGE_COLUMNS
 
 
 def _cell(value: object) -> str:
